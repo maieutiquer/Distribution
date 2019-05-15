@@ -278,6 +278,8 @@ abstract class AbstractCrudController extends AbstractApiController
             return new JsonResponse($object, 400);
         }
 
+        $this->om->refresh($object);
+
         return new JsonResponse(
             $this->serializer->serialize($object, $options)
         );
