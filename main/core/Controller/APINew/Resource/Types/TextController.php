@@ -55,8 +55,6 @@ class TextController extends AbstractCrudController
             $hubUrl = $config->getParameter('mercure.hub_url');
             $jwt = $config->getParameter('mercure.jwt');
 
-            $data = $this->decodeRequest($request);
-
             //this can also go in a crud event. We can pretty much c/c all of that as long as we have the data from the $response->getContent()
             //we might want to use uuid later on
             $topic = 'http://localhost/'.$this->getName().'/'.$id;
