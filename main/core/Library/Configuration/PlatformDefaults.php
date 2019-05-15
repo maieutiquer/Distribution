@@ -201,7 +201,14 @@ class PlatformDefaults implements ParameterProviderInterface
               'enable' => false,
               'message' => null,
             ],
-
+            'mercure' => [
+              'hub_url' => 'http://localhost:3000/hub',
+              'enabled' => false,
+              //generated with https://jwt.io/
+              //might be able to do it procedurally from the key with lcobucci/jwt
+              'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.NFCEbEEiI7zUxDU2Hj0YB71fQVT8YiQBGQWEyxWG0po',
+              'jwt_key' => 'aVerySecretKey',
+            ],
             'header_menu' => 'workspaces',
             'show_about_button' => true,
             //not documented, for the cli tool claroline:user:mailing

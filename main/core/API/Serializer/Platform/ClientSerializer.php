@@ -162,6 +162,10 @@ class ClientSerializer
                 }, $this->om->getRepository('ClarolineCoreBundle:Resource\ResourceType')->findAll()),
                 'softDelete' => $this->config->getParameter('resource.soft_delete'),
             ],
+            'mercure' => [
+              'enabled' => $this->config->getParameter('mercure.enabled'),
+              'hub_url' => $this->config->getParameter('mercure.hub_url'),
+            ],
             'plugins' => $this->pluginManager->getEnabled(true),
             'javascripts' => $this->config->getParameter('javascripts'),
         ];

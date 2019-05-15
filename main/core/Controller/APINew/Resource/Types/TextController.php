@@ -20,10 +20,6 @@ use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\Update;
 
-define('HUB_URL', 'http://localhost:3000/hub');
-define('JWT', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.NFCEbEEiI7zUxDU2Hj0YB71fQVT8YiQBGQWEyxWG0po');
-define('JWT_KEY', 'aVerySecretKey');
-
 /**
  * @EXT\Route("resource_text")
  */
@@ -49,25 +45,36 @@ class TextController extends AbstractCrudController
      *
      * @return JsonResponse
      */
-    public function updateAction($id, Request $request, $class/*, Publisher $publisher*/)
+    public function updateAction($id, Request $request, $class)
     {
         $response = parent::updateAction($id, $request, $class);
-        $topic = 'http://localhost/text';
 
-        $publisher = new Publisher(
-            HUB_URL.'?topic=http://localhost/text',
-            new StaticJwtProvider(JWT)
+        $config = $this->container->get('claroline.config.platform_config_handler');
+
+        if ($config->getParameter('mercure.enabled')) {
+            $hubUrl = $config->getParameter('mercure.hub_url');
+            $jwt = $config->getParameter('mercure.jwt');
+
+            $data = $this->decodeRequest($request);
+
+            //this can also go in a crud event. We can pretty much c/c all of that as long as we have the data from the $response->getContent()
+            //we might want to use uuid later on
+            $topic = 'http://localhost/'.$this->getName().'/'.$id;
+
+            $publisher = new Publisher(
+              $hubUrl.'?topic='.$topic,
+              new StaticJwtProvider($jwt)
+            );
+
+            $update = new Update(
+              $topic,
+              //might want to use response->getContent() sometimes
+              $response->getContent()
           );
 
-        //get url from referer.
-        $update = new Update(
-            'http://localhost/text',
-            'update from mercure'
-            //$response->getContent()
-        );
-
-        // The Publisher service is an invokable object
-        $publisher($update);
+            // The Publisher service is an invokable object
+            $publisher($update);
+        }
 
         return $response;
     }
