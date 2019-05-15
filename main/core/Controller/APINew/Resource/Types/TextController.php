@@ -21,7 +21,8 @@ use Symfony\Component\Mercure\Publisher;
 use Symfony\Component\Mercure\Update;
 
 define('HUB_URL', 'http://localhost:3000/hub');
-define('JWT', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.iHLdpAEjX4BqCsHJEegxRmO-Y6sMxXwNATrQyRNt3GY');
+define('JWT', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.NFCEbEEiI7zUxDU2Hj0YB71fQVT8YiQBGQWEyxWG0po');
+define('JWT_KEY', 'aVerySecretKey');
 
 /**
  * @EXT\Route("resource_text")
@@ -48,22 +49,21 @@ class TextController extends AbstractCrudController
      *
      * @return JsonResponse
      */
-    public function updateAction($id, Request $request, $class)
+    public function updateAction($id, Request $request, $class/*, Publisher $publisher*/)
     {
         $response = parent::updateAction($id, $request, $class);
-
-        var_dump(JWT);
-        var_dump(HUB_URL);
+        $topic = 'http://localhost/text';
 
         $publisher = new Publisher(
-          HUB_URL."?topic={$id}",
-          new StaticJwtProvider(JWT)
-        );
+            HUB_URL.'?topic=http://localhost/text',
+            new StaticJwtProvider(JWT)
+          );
 
         //get url from referer.
         $update = new Update(
-            'http://localhost/Claroline/Claroline/web/app_dev.php/resources/show/text/7EEC1A2A-F204-4EDF-A158-98CE49B4E00F#/edit',
-            $response->getContent()
+            'http://localhost/text',
+            'update from mercure'
+            //$response->getContent()
         );
 
         // The Publisher service is an invokable object
