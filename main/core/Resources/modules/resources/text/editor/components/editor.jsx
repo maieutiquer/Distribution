@@ -11,6 +11,8 @@ import {selectors} from '#/main/core/resources/text/editor/store'
 import {Text as TextTypes} from '#/main/core/resources/text/prop-types'
 
 import { actions as formActions } from '#/main/app/content/form/store'
+import {actions as mercureActions} from '#/main/core/mercure/actions'
+
 import {param} from '#/main/app/config/parameters'
 
 class EditorComponent extends Component {
@@ -18,14 +20,13 @@ class EditorComponent extends Component {
   componentDidMount() {
     if (param('mercure.enabled')) {
       const u = new URL(param('mercure.hub_url'))
-      u.searchParams.append('topic', 'http://localhost/resource_text/' + this.props.text.id)
+      u.searchParams.append('topic', 'http://localhost/' + this.props.text.id)
       const es = new EventSource(u)
 
       es.onmessage = e => {
         this.props.loadText(JSON.parse(e.data))
       }
     }
-
   }
 
   //maybe do it on click
@@ -56,6 +57,11 @@ class EditorComponent extends Component {
               label: trans('text'),
               hideLabel: true,
               required: true,
+              onChange: (text) => {
+                //console.log(text)
+                //console.log(this.props)
+                this.props.publish(this.props.text)
+              },
               options: {
                 workspace: this.props.workspace,
                 minRows: 3
@@ -74,7 +80,8 @@ EditorComponent.propTypes = {
   text: T.shape(
     TextTypes.propTypes
   ).isRequired,
-  loadText: T.func.isRequired
+  loadText: T.func.isRequired,
+  publish: T.func.isRequired
 }
 
 const Editor = connect(
@@ -85,6 +92,9 @@ const Editor = connect(
   (dispatch) => ({
     loadText(text) {
       dispatch(formActions.resetForm(selectors.FORM_NAME, text))
+    },
+    publish(text) {
+      dispatch(mercureActions.publish(text))
     }
   })
 )(EditorComponent)

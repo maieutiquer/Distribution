@@ -128,6 +128,11 @@ claro_client:
     type: annotation
     prefix: api
 
+claro_mercure:
+    resource: "@ClarolineCoreBundle/Controller/Mercure/MercureController.php"
+    type: annotation
+    prefix: api
+
 claro_admin_resource_icons:
     resource: "@ClarolineCoreBundle/Controller/Administration/IconController.php"
     prefix: admin/parameters/appearance/icon

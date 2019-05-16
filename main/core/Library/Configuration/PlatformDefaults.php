@@ -208,6 +208,7 @@ class PlatformDefaults implements ParameterProviderInterface
               //might be able to do it procedurally from the key with lcobucci/jwt
               'jwt' => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZXJjdXJlIjp7InB1Ymxpc2giOlsiKiJdfX0.NFCEbEEiI7zUxDU2Hj0YB71fQVT8YiQBGQWEyxWG0po',
               'jwt_key' => 'aVerySecretKey',
+              'storage_folder' => '/tmp/realtime',
             ],
             'header_menu' => 'workspaces',
             'show_about_button' => true,
