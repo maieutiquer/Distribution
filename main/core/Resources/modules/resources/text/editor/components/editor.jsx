@@ -1,7 +1,7 @@
 import React, {Component} from 'react'
 import {connect} from 'react-redux'
 import {PropTypes as T} from 'prop-types'
-import {cloneDeep} from 'lodash/cloneDeep'
+import cloneDeep from 'lodash/cloneDeep'
 
 import {trans} from '#/main/app/intl/translation'
 import {LINK_BUTTON} from '#/main/app/buttons'
@@ -20,6 +20,7 @@ class EditorComponent extends Component {
 
   componentDidMount() {
     if (param('mercure.enabled')) {
+      this.props.getTemporary(this.props.text)
       const u = new URL(param('mercure.hub_url'))
       u.searchParams.append('topic', 'http://localhost/' + this.props.text.id)
       const es = new EventSource(u)
@@ -27,10 +28,9 @@ class EditorComponent extends Component {
       es.onmessage = e => {
         this.props.loadText(JSON.parse(e.data))
       }
+
     }
   }
-
-  //maybe do it on click
 
   render() {
     return <FormData
@@ -41,11 +41,6 @@ class EditorComponent extends Component {
         type: LINK_BUTTON,
         target: '/',
         exact: true
-      }}
-      lock={{
-        id: this.props.text.id,
-        className: 'Claroline\\CoreBundle\\Entity\\Resource\\Text',
-        autoUnlock: true
       }}
       sections={[
         {
@@ -59,6 +54,7 @@ class EditorComponent extends Component {
               hideLabel: true,
               required: true,
               onChange: (content) => {
+                //c'est un peu brutal non ?
                 const newText = cloneDeep(this.props.text)
                 newText.content = content
                 this.props.publish(newText)
@@ -82,7 +78,8 @@ EditorComponent.propTypes = {
     TextTypes.propTypes
   ).isRequired,
   loadText: T.func.isRequired,
-  publish: T.func.isRequired
+  publish: T.func.isRequired,
+  getTemporary: T.func.isRequired
 }
 
 const Editor = connect(
@@ -93,6 +90,9 @@ const Editor = connect(
   (dispatch) => ({
     loadText(text) {
       dispatch(formActions.resetForm(selectors.FORM_NAME, text))
+    },
+    getTemporary(text) {
+      dispatch(mercureActions.get(selectors.FORM_NAME, text))
     },
     publish(text) {
       dispatch(mercureActions.publish(text))
