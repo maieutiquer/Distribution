@@ -15,6 +15,7 @@ use Claroline\AppBundle\Controller\RequestDecoderTrait;
 use Claroline\CoreBundle\Library\Configuration\PlatformConfigurationHandler;
 use JMS\DiExtraBundle\Annotation as DI;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration as EXT;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Mercure\Jwt\StaticJwtProvider;
 use Symfony\Component\Mercure\Publisher;
@@ -63,12 +64,14 @@ class MercureController
             new StaticJwtProvider($jwt)
         );
 
+        $encoded = json_encode($data);
+
         $update = new Update(
             $topic,
-            $data
+            json_encode($data)
         );
 
-        file_put_contents($data, $storage.DIRECTORY_SEPARATOR.$uuid);
+        file_put_contents($encoded, $storage.DIRECTORY_SEPARATOR.$uuid);
 
         // The Publisher service is an invokable object
         $publisher($update);

@@ -1,6 +1,7 @@
 import React, {Component} from 'react'
 import {connect} from 'react-redux'
 import {PropTypes as T} from 'prop-types'
+import {cloneDeep} from 'lodash/cloneDeep'
 
 import {trans} from '#/main/app/intl/translation'
 import {LINK_BUTTON} from '#/main/app/buttons'
@@ -11,7 +12,7 @@ import {selectors} from '#/main/core/resources/text/editor/store'
 import {Text as TextTypes} from '#/main/core/resources/text/prop-types'
 
 import { actions as formActions } from '#/main/app/content/form/store'
-import {actions as mercureActions} from '#/main/core/mercure/actions'
+import { actions as mercureActions } from '#/main/core/mercure/actions'
 
 import {param} from '#/main/app/config/parameters'
 
@@ -57,10 +58,10 @@ class EditorComponent extends Component {
               label: trans('text'),
               hideLabel: true,
               required: true,
-              onChange: (text) => {
-                //console.log(text)
-                //console.log(this.props)
-                this.props.publish(this.props.text)
+              onChange: (content) => {
+                const newText = cloneDeep(this.props.text)
+                newText.content = content
+                this.props.publish(newText)
               },
               options: {
                 workspace: this.props.workspace,

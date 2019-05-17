@@ -11,3 +11,10 @@ actions.publish = (data) => ({
     }
   }
 })
+
+actions.get = (data) => ({
+  [API_REQUEST]: {
+    url: ['claro_mercure_get', { uuid: data.id }],
+    request: { method: 'GET' }
+  }
+})
