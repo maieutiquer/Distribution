@@ -88,10 +88,7 @@ class Version20190624150111 extends AbstractMigration
             ADD CONSTRAINT FK_6B1166A5A76ED395 FOREIGN KEY (user_id) 
             REFERENCES claro_user (id) 
             ON DELETE CASCADE
-        ');
-        $this->addSql('
-            CREATE UNIQUE INDEX UNIQ_A76799FF989D9B62 ON claro_resource_node (slug)
-        ');
+       ');
     }
 
     public function down(Schema $schema)
