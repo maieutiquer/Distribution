@@ -367,6 +367,31 @@ class WorkspaceController extends AbstractCrudController
 
     /**
      * @ApiDoc(
+     *     description="Export the workspace as a zip archive.",
+     *     parameters={
+     *         {"name": "id", "type": {"string"},  "description": "The workspace code"}
+     *     }
+     * )
+     * @Route(
+     *    "/{workspace}/export/definition",
+     *    name="apiv2_workspace_export_definition"
+     * )
+     * @Method("GET")
+     * @ParamConverter("workspace", options={"mapping": {"workspace": "id"}})
+     *
+     * @param Workspace $workspace
+     *
+     * @return BinaryFileResponse
+     */
+    public function exportDefinitionAction(Workspace $workspace)
+    {
+        $data = $this->importer->export($workspace, true);
+
+        return new JsonResponse($data);
+    }
+
+    /**
+     * @ApiDoc(
      *     description="Remove workspaces.",
      *     queryString={
      *         {"name": "ids", "type": "array", "description": "the list of workspace uuids."}

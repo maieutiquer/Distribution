@@ -103,10 +103,15 @@ class TransferManager
         return $generic->isAllowed() && $specific->isAllowed();
     }
 
-    public function export(Workspace $workspace)
+    public function export(Workspace $workspace, $dataOnly = false)
     {
         $fileBag = new FileBag();
         $data = $this->serialize($workspace);
+
+        if ($dataOnly) {
+            return $data;
+        }
+
         $data = $this->exportFiles($data, $fileBag, $workspace);
         $archive = new \ZipArchive();
         $pathArch = $this->tempFileManager->generate();
