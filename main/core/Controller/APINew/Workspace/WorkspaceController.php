@@ -373,11 +373,11 @@ class WorkspaceController extends AbstractCrudController
      *     }
      * )
      * @Route(
-     *    "/{workspace}/export/definition",
+     *    "/{code}/export/definition",
      *    name="apiv2_workspace_export_definition"
      * )
      * @Method("GET")
-     * @ParamConverter("workspace", options={"mapping": {"workspace": "id"}})
+     * @ParamConverter("workspace", options={"mapping": {"code": "code"}})
      *
      * @param Workspace $workspace
      *
