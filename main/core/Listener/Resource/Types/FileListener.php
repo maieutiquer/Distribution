@@ -263,7 +263,6 @@ class FileListener
             } catch (\Exception $e) {
             }
         }
-        //move filebags elements here
     }
 
     /**

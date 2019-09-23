@@ -59,10 +59,9 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
         //we assume everything in on the same server
         foreach ($data['orderedTools'] as $orderedTool) {
             if (isset($orderedTool['data']['resources'])) {
-                foreach ($orderedTool['data']['resources'] as $resource) {
+                foreach ($orderedTool['data']['resources'] as &$resource) {
                     if ('file' === $resource['_type']) {
-                        $resource['_path'] = $input->getArgument('path').'/'.$resource['hashName'];
-                        $fileBag->add($input->getArgument('path').'/'.$resource['hashName'], $input->getArgument('path').'/'.$resource['hashName']);
+                        $fileBag->add($resource['_path'], $input->getArgument('path').'/'.$resource['hashName']);
                     }
                 }
             }

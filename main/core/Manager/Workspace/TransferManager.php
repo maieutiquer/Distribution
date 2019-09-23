@@ -107,12 +107,12 @@ class TransferManager
     {
         $fileBag = new FileBag();
         $data = $this->serialize($workspace);
+        $data = $this->exportFiles($data, $fileBag, $workspace);
 
         if ($dataOnly) {
             return $data;
         }
 
-        $data = $this->exportFiles($data, $fileBag, $workspace);
         $archive = new \ZipArchive();
         $pathArch = $this->tempFileManager->generate();
         $archive->open($pathArch, \ZipArchive::CREATE);
