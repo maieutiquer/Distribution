@@ -15,6 +15,7 @@ use Claroline\BundleRecorder\Log\LoggableTrait;
 use Claroline\CoreBundle\Entity\File\PublicFile;
 use Claroline\CoreBundle\Entity\Role;
 use Claroline\CoreBundle\Entity\Tool\OrderedTool;
+use Claroline\CoreBundle\Entity\Tool\Tool;
 use Claroline\CoreBundle\Entity\User;
 use Claroline\CoreBundle\Entity\Workspace\Workspace;
 use Claroline\CoreBundle\Event\ExportObjectEvent;
@@ -73,7 +74,7 @@ class TransferManager
      *
      * @return object
      */
-    public function create(array $data, Workspace $workspace)
+    public function create(array $data, Workspace $workspace, array $options = [])
     {
         $options = [Options::LIGHT_COPY, Options::REFRESH_UUID];
         // gets entity from raw data.
@@ -105,9 +106,15 @@ class TransferManager
 
     public function export(Workspace $workspace, $dataOnly = false)
     {
+        $options = [];
+
+        if ($dataOnly) {
+            $options = [Options::NO_HASH_REBUILD];
+        }
+
         $fileBag = new FileBag();
         $data = $this->serialize($workspace);
-        $data = $this->exportFiles($data, $fileBag, $workspace);
+        $data = $this->exportFiles($data, $fileBag, $workspace, $options);
 
         if ($dataOnly) {
             return $data;
@@ -187,7 +194,9 @@ class TransferManager
      */
     public function deserialize(array $data, Workspace $workspace, array $options = [], FileBag $bag = null)
     {
-        $data = $this->replaceResourceIds($data);
+        if (!in_array(Options::NO_HASH_REBUILD, $options)) {
+            $data = $this->replaceResourceIds($data);
+        }
 
         $defaultRole = $data['registration']['defaultRole'];
 
@@ -233,7 +242,8 @@ class TransferManager
         $this->log('Deserializing the tools...');
 
         foreach ($data['orderedTools'] as $orderedToolData) {
-            $orderedTool = new OrderedTool();
+            $tool = $this->om->getRepository(Tool::class)->findOneByName($orderedToolData['tool']);
+            $orderedTool = $this->om->getRepository(OrderedTool::class)->findOneBy(['workspace' => $workspace->getId(), 'tool' => $tool->getId()]) ?? new OrderedTool();
             $this->ots->setLogger($this->logger);
             $this->ots->deserialize($orderedToolData, $orderedTool, [], $workspace, $bag);
         }
@@ -246,7 +256,7 @@ class TransferManager
     }
 
     //once everything is serialized, we add files to the archive.
-    public function exportFiles($data, FileBag $fileBag, Workspace $workspace)
+    public function exportFiles($data, FileBag $fileBag, Workspace $workspace, array $options = [])
     {
         foreach ($data['orderedTools'] as $key => $orderedToolData) {
             //copied from crud
@@ -255,7 +265,7 @@ class TransferManager
             if (isset($orderedToolData['data'])) {
                 /** @var ExportObjectEvent $event */
                 $event = $this->dispatcher->dispatch($name, ExportObjectEvent::class, [
-                    new \StdClass(), $fileBag, $orderedToolData['data'], $workspace,
+                    new \StdClass(), $fileBag, $orderedToolData['data'], $workspace, $options,
                 ]);
                 $data['orderedTools'][$key]['data'] = $event->getData();
             }

@@ -113,7 +113,7 @@ class OrderedToolTransfer
                 }
 
                 if ($role) {
-                    $rights = new ToolRights();
+                    $rights = $om->getRepository(ToolRights::class)->findOneBy(['role' => $role, 'orderedTool' => $orderedTool]) ?? new ToolRights();
                     $rights->setRole($role);
                     $rights->setMask($restriction['mask']);
                     $rights->setOrderedTool($orderedTool);

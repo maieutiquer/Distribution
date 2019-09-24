@@ -69,7 +69,7 @@ class ResourceManager implements ToolImporterInterface
         if ($res) {
             $resource = array_merge(
                 $this->serializer->serialize($res, $resSerializeOptions),
-                ['_nodeId' => $root->getUuid(), '_class' => $node['meta']['className'], '_type' => $node['meta']['type']]
+                ['_nodeId' => $root->getUuid(), '_class' => $node['meta']['className'], '_type' => $node['meta']['type'], '_id' => $res->getId()]
             );
 
             $data['nodes'][] = $node;
@@ -151,7 +151,7 @@ class ResourceManager implements ToolImporterInterface
         $this->om->startFlushSuite();
 
         foreach ($resources as $data) {
-            $resource = new $data['_class']();
+            $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
             $resource->setResourceNode($nodes[$data['_nodeId']]);
             $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
             $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
@@ -179,7 +179,7 @@ class ResourceManager implements ToolImporterInterface
             $new = $this->dispatcher->dispatch(
                 'transfer.'.$node->getResourceType()->getName().'.export',
                 ExportObjectEvent::class,
-                [$resource, $event->getFileBag(), $serialized, $event->getWorkspace()]
+                [$resource, $event->getFileBag(), $serialized, $event->getWorkspace(), $event->getOptions()]
             );
 
             $event->overwrite('resources.'.$key, $new->getData());

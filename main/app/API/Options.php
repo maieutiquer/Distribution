@@ -68,6 +68,7 @@ final class Options
     const PROFILE_SERIALIZE = 'profile_serialize';
     const VALIDATE_FACET = 'validate_facet';
     const REGISTRATION = 'registration';
+    const NO_HASH_REBUILD = 'NO_HASH_REBUILD';
 
     //for workspace
     const WORKSPACE_MODEL = 'workspace_model';
