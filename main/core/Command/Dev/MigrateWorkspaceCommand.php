@@ -11,6 +11,7 @@
 
 namespace Claroline\CoreBundle\Command\Dev;
 
+use Claroline\AppBundle\API\Options;
 use Claroline\AppBundle\API\Utils\FileBag;
 use Claroline\AppBundle\Command\BaseCommandTrait;
 use Claroline\AppBundle\Logger\ConsoleLogger;
@@ -71,15 +72,16 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
 
         //check if code already exists and replace it if it's the case
         $om = $this->getContainer()->get('claroline.persistence.object_manager');
-        $found = $om->getRepository(Workspace::class)->findOneByCode($data['code']);
-        if ($found) {
-            $data['code'] = $data['code'].uniqid();
+        $workspace = $om->getRepository(Workspace::class)->findOneByCode($data['code']);
+
+        if (!$workspace) {
+            $workspace = new Workspace();
         }
-        $workspace = new Workspace();
+
         $creator = $om->getRepository(User::class)->findOneByUsername($input->getArgument('creator'));
         $workspace->setCreator($creator);
         $this->getContainer()->get('claroline.manager.workspace.transfer')->setLogger($consoleLogger);
-        $this->getContainer()->get('claroline.manager.workspace.transfer')->deserialize($data, $workspace, [], $fileBag);
+        $this->getContainer()->get('claroline.manager.workspace.transfer')->deserialize($data, $workspace, [Options::NO_HASH_REBUILD], $fileBag);
         $managerRole = $om->getRepository(Role::class)->findOneBy(['workspace' => $workspace, 'translationKey' => 'manager']);
         $creator->addRole($managerRole);
         $om->persist($creator);
