@@ -33,7 +33,7 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
     private $params = [
         'url' => 'The base urls from where the workspace will be fetched: ',
         'path' => 'The file base path: ',
-        'id' => 'The workspace id:  ',
+        'code' => 'The workspace code:  ',
     ];
 
     protected function configure()
@@ -44,7 +44,7 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
             [
                 new InputArgument('url', InputArgument::REQUIRED, 'The base urls from where the workspace will be fetched'),
                 new InputArgument('path', InputArgument::REQUIRED, 'The file base path'),
-                new InputArgument('id', InputArgument::REQUIRED, 'The workspace id'),
+                new InputArgument('code', InputArgument::REQUIRED, 'The workspace code'),
                 new InputArgument('creator', InputArgument::REQUIRED, 'The creator username'),
             ]
         );
@@ -52,8 +52,9 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-	    ini_set('default_socket_timeout', 450); 
-        $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('id').'/export/definition'), true);
+	ini_set('default_socket_timeout', 450); 
+        //get the workspace id from the code
+        $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
         $consoleLogger = ConsoleLogger::get($output);
         $fileBag = new FileBag();
 
