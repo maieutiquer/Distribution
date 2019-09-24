@@ -52,6 +52,7 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+	    ini_set('default_socket_timeout', 450); 
         $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('id').'/export/definition'), true);
         $consoleLogger = ConsoleLogger::get($output);
         $fileBag = new FileBag();

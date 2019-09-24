@@ -80,6 +80,7 @@ class ResourcePage extends Component {
         component: DashboardMain
       }
     ].concat(this.props.routes)
+	  console.log(this.props.resourceNode)
 
     return (
       <ToolPage
