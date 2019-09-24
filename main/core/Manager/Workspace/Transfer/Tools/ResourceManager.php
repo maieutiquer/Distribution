@@ -119,8 +119,11 @@ class ResourceManager implements ToolImporterInterface
     private function deserializeNodes(array $nodes, Workspace $workspace)
     {
         $created = [];
+        $i = 1;
+        $total = count($nodes);
 
         foreach ($nodes as $data) {
+            $this->log('Deserialize node '.$data['id']."({$i}/{$total})");
             $rights = $data['rights'];
             unset($data['rights']);
             $node = $this->om->getObject($data, ResourceNode::class) ?? new ResourceNode();
@@ -141,6 +144,8 @@ class ResourceManager implements ToolImporterInterface
             }
 
             $this->om->persist($node);
+
+            ++$i;
         }
 
         return $created;
@@ -149,8 +154,11 @@ class ResourceManager implements ToolImporterInterface
     private function deserializeResources(array $resources, Workspace $workspace, array $nodes, FileBag $bag)
     {
         $this->om->startFlushSuite();
+        $i = 1;
+        $total = count($resources);
 
         foreach ($resources as $data) {
+            $this->log('Deserialize resource '.$data['_id']."({$i}/{$total})");
             $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
             $resource->setResourceNode($nodes[$data['_nodeId']]);
             $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
@@ -162,6 +170,7 @@ class ResourceManager implements ToolImporterInterface
                 [$bag, $data, $resource, null, $workspace]
             );
             $this->om->persist($resource);
+            ++$i;
         }
 
         $this->om->endFlushSuite();
