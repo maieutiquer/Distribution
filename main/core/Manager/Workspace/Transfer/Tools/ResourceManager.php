@@ -173,7 +173,12 @@ class ResourceManager implements ToolImporterInterface
             //}
 
             $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
-            $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
+            $return = $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
+
+            if ($return) {
+                $resource = $return;
+            }
+
             $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
             $this->dispatcher->dispatch(
                 'transfer.'.$data['_type'].'.import.after',
