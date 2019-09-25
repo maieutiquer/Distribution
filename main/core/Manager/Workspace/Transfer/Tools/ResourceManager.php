@@ -162,6 +162,12 @@ class ResourceManager implements ToolImporterInterface
             $this->log('Deserialize resource '.$data['_id']."({$i}/{$total})");
             $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
 
+            if (!$resource->getId()) {
+                $this->log("Resource {$data['_id']} not found: creating new");
+            } else {
+                $this->log("Resource {$data['_id']} found");
+            }
+
             $hasNode = $this->om
                 ->getRepository($nodes[$data['_nodeId']]->getClass())
                 ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]);
