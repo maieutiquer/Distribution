@@ -185,7 +185,7 @@ class ResourceManager implements ToolImporterInterface
 
             if (0 === $i % 50) {
                 $this->log('Flushing...');
-                $this->om->flush();
+                $this->om->forceFlush();
             }
 
             ++$i;
