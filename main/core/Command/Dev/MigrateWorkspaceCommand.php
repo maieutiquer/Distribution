@@ -48,12 +48,22 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
                 new InputArgument('creator', InputArgument::REQUIRED, 'The creator username'),
             ]
         );
+        $this->addOption(
+            'is_file',
+            'f',
+            InputOption::VALUE_NONE,
+            'url is a file path'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         //get the workspace id from the code
-        $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
+        if ($this->getOption('is_file')) {
+            $data = json_decode(file_get_contents($input->getArgument('url')));
+        } else {
+            $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
+        }
         $consoleLogger = ConsoleLogger::get($output);
         $fileBag = new FileBag();
 
