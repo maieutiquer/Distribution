@@ -162,25 +162,26 @@ class ResourceManager implements ToolImporterInterface
             $this->log('Deserialize resource '.$data['_id']."({$i}/{$total})");
             $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
 
-            /** @var AbstractResource $resource */
-            $resource = $this->om
+            $hasNode = $this->om
                 ->getRepository($nodes[$data['_nodeId']]->getClass())
                 ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]);
 
-            if (!$resource) {
+            if (!$hasNode) {
                 $resource->setResourceNode($nodes[$data['_nodeId']]);
-                $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
-                $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
-                $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
-                $this->dispatcher->dispatch(
-                  'transfer.'.$data['_type'].'.import.after',
-                  ImportObjectEvent::class,
-                  [$bag, $data, $resource, null, $workspace]
-              );
-                $this->om->persist($resource);
             } else {
                 $this->log('Node '.$data['_nodeId'].' already has a resource', LogLevel::ERROR);
             }
+
+            $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
+            $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
+            $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
+            $this->dispatcher->dispatch(
+                'transfer.'.$data['_type'].'.import.after',
+                ImportObjectEvent::class,
+                [$bag, $data, $resource, null, $workspace]
+            );
+
+            $this->om->persist($resource);
 
             ++$i;
         }
