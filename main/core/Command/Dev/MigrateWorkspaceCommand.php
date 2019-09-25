@@ -62,8 +62,8 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
     {
 	ini_set('default_socket_timeout', 450); 
         //get the workspace id from the code
-        if ($this->getOption('is_file')) {
-            $data = json_decode(file_get_contents($input->getArgument('url')));
+        if ($input->getOption('is_file')) {
+            $data = json_decode(file_get_contents($input->getArgument('url')), true);
         } else {
             $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
         }
