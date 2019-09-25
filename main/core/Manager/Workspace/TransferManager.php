@@ -209,7 +209,8 @@ class TransferManager
         $this->log('Deserializing the roles...');
         foreach ($data['roles'] as $roleData) {
             $roleData['workspace']['uuid'] = $workspace->getUuid();
-            $role = $this->serializer->deserialize($roleData, new Role());
+            $role = $this->om->getRepository(Role::class)->findOneBy(['uuid' => $roleData['id']]) ?? new Role();
+            $role = $this->serializer->deserialize($roleData, $role);
             $role->setWorkspace($workspace);
             $this->om->persist($role);
             $roles[] = $role;
