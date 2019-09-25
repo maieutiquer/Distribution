@@ -84,7 +84,7 @@ class FileSerializer
     public function deserialize($data, File $file, array $options = [])
     {
         if (isset($data['hashName'])) {
-            $file = $this->om->getRepository(File::class)->findOneByHashName($data['hashName']);
+            $file = $this->om->getRepository(File::class)->findOneByHashName($data['hashName']) ?? $file;
         }
 
         $this->sipe('size', 'setSize', $data, $file);
