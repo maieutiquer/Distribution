@@ -17,6 +17,7 @@ use Claroline\CoreBundle\Event\ExportObjectEvent;
 use Claroline\CoreBundle\Event\ImportObjectEvent;
 use Claroline\CoreBundle\Manager\ResourceManager as ResManager;
 use Claroline\CoreBundle\Manager\UserManager;
+use Psr\Log\LogLevel;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 class ResourceManager implements ToolImporterInterface
@@ -160,16 +161,27 @@ class ResourceManager implements ToolImporterInterface
         foreach ($resources as $data) {
             $this->log('Deserialize resource '.$data['_id']."({$i}/{$total})");
             $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
-            $resource->setResourceNode($nodes[$data['_nodeId']]);
-            $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
-            $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
-            $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
-            $this->dispatcher->dispatch(
-                'transfer.'.$data['_type'].'.import.after',
-                ImportObjectEvent::class,
-                [$bag, $data, $resource, null, $workspace]
-            );
-            $this->om->persist($resource);
+
+            /** @var AbstractResource $resource */
+            $resource = $this->om
+                ->getRepository($nodes[$data['_nodeId']]->getClass())
+                ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]);
+
+            if (!$resource) {
+                $resource->setResourceNode($nodes[$data['_nodeId']]);
+                $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
+                $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
+                $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
+                $this->dispatcher->dispatch(
+                  'transfer.'.$data['_type'].'.import.after',
+                  ImportObjectEvent::class,
+                  [$bag, $data, $resource, null, $workspace]
+              );
+                $this->om->persist($resource);
+            } else {
+                $this->log('Node '.$data['_nodeId'].' already has a resource', LogLevel::ERROR);
+            }
+
             ++$i;
         }
 
