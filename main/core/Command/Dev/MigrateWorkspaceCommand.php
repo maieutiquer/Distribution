@@ -22,6 +22,7 @@ use Claroline\CoreBundle\Entity\Workspace\Workspace;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 /**
@@ -49,13 +50,23 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
                 new InputArgument('creator', InputArgument::REQUIRED, 'The creator username'),
             ]
         );
+        $this->addOption(
+            'is_file',
+            'f',
+            InputOption::VALUE_NONE,
+            'url is a file path'
+        );
     }
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
 	ini_set('default_socket_timeout', 450); 
         //get the workspace id from the code
-        $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
+        if ($this->getOption('is_file')) {
+            $data = json_decode(file_get_contents($input->getArgument('url')));
+        } else {
+            $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
+        }
         $consoleLogger = ConsoleLogger::get($output);
         $fileBag = new FileBag();
 
