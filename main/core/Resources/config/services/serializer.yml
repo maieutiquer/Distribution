@@ -349,7 +349,8 @@ services:
             - '@router'
             - '%claroline.param.files_directory%'
             - '@event_dispatcher'
-
+            - '@claroline.persistence.object_manager'
+            
     claroline.serializer.resource_file:
         alias: Claroline\CoreBundle\API\Serializer\Resource\Types\FileSerializer
         public: true
