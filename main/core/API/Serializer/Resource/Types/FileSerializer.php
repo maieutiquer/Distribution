@@ -83,6 +83,10 @@ class FileSerializer
 
     public function deserialize($data, File $file, array $options = [])
     {
+        if (isset($data['hashName'])) {
+            $file = $this->om->getRepository(File::class)->findOneByHashName($data['hashName']);
+        }
+
         $this->sipe('size', 'setSize', $data, $file);
         $this->sipe('hashName', 'setHashName', $data, $file);
         $this->sipe('autoDownload', 'setAutoDownload', $data, $file);
@@ -98,6 +102,8 @@ class FileSerializer
             ]);
             $this->eventDispatcher->dispatch('resource.file.deserialize', $dataEvent);
         }
+
+        return $file;
     }
 
     private function generateEventName(ResourceNode $node, $event)
