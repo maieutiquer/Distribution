@@ -60,8 +60,8 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         //get the workspace id from the code
-        if ($this->getOption('is_file')) {
-            $data = json_decode(file_get_contents($input->getArgument('url')));
+        if ($input->getOption('is_file')) {
+            $data = json_decode(file_get_contents($input->getArgument('url')), true);
         } else {
             $data = json_decode(file_get_contents($input->getArgument('url').'/apiv2/workspace/'.$input->getArgument('code').'/export/definition'), true);
         }
