@@ -3,6 +3,7 @@
 namespace Claroline\CoreBundle\API\Serializer\Resource\Types;
 
 use Claroline\AppBundle\API\Serializer\SerializerTrait;
+use Claroline\AppBundle\Persistence\ObjectManager;
 use Claroline\CoreBundle\Entity\Resource\File;
 use Claroline\CoreBundle\Entity\Resource\ResourceNode;
 use Claroline\CoreBundle\Event\GenericDataEvent;
@@ -32,11 +33,13 @@ class FileSerializer
     public function __construct(
         RouterInterface $router,
         $filesDir,
-        EventDispatcherInterface $eventDispatcher
+        EventDispatcherInterface $eventDispatcher,
+        ObjectManager $om
     ) {
         $this->router = $router;
         $this->filesDir = $filesDir;
         $this->eventDispatcher = $eventDispatcher;
+        $this->om = $om;
     }
 
     /**
