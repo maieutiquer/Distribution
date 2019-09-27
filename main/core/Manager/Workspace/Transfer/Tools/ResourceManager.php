@@ -12,6 +12,7 @@ use Claroline\AppBundle\Persistence\ObjectManager;
 use Claroline\BundleRecorder\Log\LoggableTrait;
 use Claroline\CoreBundle\Entity\Resource\ResourceNode;
 use Claroline\CoreBundle\Entity\User;
+use Claroline\CoreBundle\Entity\Resource\File;
 use Claroline\CoreBundle\Entity\Workspace\Workspace;
 use Claroline\CoreBundle\Event\ExportObjectEvent;
 use Claroline\CoreBundle\Event\ImportObjectEvent;
@@ -159,25 +160,30 @@ class ResourceManager implements ToolImporterInterface
         $total = count($resources);
 
         foreach ($resources as $data) {
-            $this->log('Deserialize resource '.$data['_id']."({$i}/{$total})");
-            $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
+            $this->log('Deserialize resource '.$data['_id']." for node {$nodes[$data['_nodeId']]->getId()} ({$i}/{$total})");
 
-            $hasNode = $this->om
+	    /*
+	    if ($data['_class'] === File::class) {
+            $resource = $this->om->getRepository($data['_class'])->findOneByHashName($data['hashName']) ?? new $data['_class']();
+	    } else {
+
+            $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
+	    }*/
+
+
+            $resource = $this->om
                 ->getRepository($nodes[$data['_nodeId']]->getClass())
-                ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]);
+                ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]) ?? new $data['_class']();
 
             //if (!$hasNode) {
-            $resource->setResourceNode($nodes[$data['_nodeId']]);
             //} else {
             //  $this->log('Node '.$data['_nodeId'].' already has a resource', LogLevel::ERROR);
             //}
 
             $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
-            $return = $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
+            $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
 
-            if ($return) {
-                $resource = $return;
-            }
+            $resource->setResourceNode($nodes[$data['_nodeId']]);
 
             $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
             $this->dispatcher->dispatch(
@@ -188,7 +194,7 @@ class ResourceManager implements ToolImporterInterface
 
             $this->om->persist($resource);
 
-            if (0 === $i % 50) {
+            if (0 === $i % 1000) {
                 $this->log('Flushing...');
                 $this->om->forceFlush();
             }

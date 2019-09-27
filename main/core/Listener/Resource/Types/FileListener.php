@@ -272,7 +272,9 @@ class FileListener
             try {
                 $ds = DIRECTORY_SEPARATOR;
                 $fileSystem->copy($bag->get($data['_path']), $this->filesDir.$ds.$data['hashName']);
+		var_dump('copy to ' . $this->filesDir.$ds.$data['hashName']);
             } catch (\Exception $e) {
+		    var_dump($e->getMessage());
             }
         }
     }
@@ -307,6 +309,7 @@ class FileListener
         try {
             copy($filePath, $newPath);
         } catch (\Exception $e) {
+		var_dump($e->getMessage());
             //do nothing yet
             //maybe log an error
         }
