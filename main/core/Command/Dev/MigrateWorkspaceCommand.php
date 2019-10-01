@@ -94,6 +94,14 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
         $this->getContainer()->get('claroline.manager.workspace.transfer')->setLogger($consoleLogger);
         $this->getContainer()->get('claroline.manager.workspace.transfer')->deserialize($data, $workspace, [Options::NO_HASH_REBUILD], $fileBag);
         $managerRole = $om->getRepository(Role::class)->findOneBy(['workspace' => $workspace, 'translationKey' => 'manager']);
+	if (!$managerRole) {
+	   $managerRole = $this->getContainer()->get('claroline.manager.role_manager')->createWorkspaceRole(
+	       'ROLE_WS_MANAGER_' . $workspace->getUuid(),
+	       'manager',
+               $workspace,
+	       true
+	   );
+	}
         $creator->addRole($managerRole);
         $om->persist($creator);
         $om->flush();
