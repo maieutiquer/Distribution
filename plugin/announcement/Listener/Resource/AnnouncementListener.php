@@ -187,10 +187,13 @@ class AnnouncementListener
         $data = $event->getData();
         $announcement = $event->getObject();
 
-        foreach ($data['posts'] as $post) {
-            $announce = $this->serializer->deserialize($post, new Announcement(), [Options::REFRESH_UUID]);
-            $this->om->persist($announce);
-            $announce->setAggregate($announcement);
+        //just in case
+        if ($announcement) {
+            foreach ($data['posts'] as $post) {
+                $announce = $this->serializer->deserialize($post, new Announcement(), [Options::REFRESH_UUID]);
+                $this->om->persist($announce);
+                $announce->setAggregate($announcement);
+            }
         }
 
         $this->om->persist($announcement);
