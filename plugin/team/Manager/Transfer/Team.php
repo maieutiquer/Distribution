@@ -73,13 +73,13 @@ class Team implements ToolImporterInterface
     public function deserialize(array $data, Workspace $workspace, array $options, FileBag $bag)
     {
         foreach ($data['teams'] as $teamData) {
-            $team = new TeamEntity();
+            $team = $this->om->getRepository(TeamEntity::class)->findOneByUuid($teamData['id']) ?? new TeamEntity();
             $this->teamSerializer->deserialize($teamData, $team, [Options::REFRESH_UUID]);
             $team->setWorkspace($workspace);
             $this->om->persist($team);
         }
 
-        $parameters = new WorkspaceTeamParameters();
+        $parameters = $this->om->getRepository(WorkspaceTeamParameters::class)->findOneByWorkspace($workspace) ?? new WorkspaceTeamParameters();
         $this->parametersSerializer->deserialize($data['parameters'], $parameters, [Options::REFRESH_UUID]);
         $parameters->setWorkspace($workspace);
         $this->om->persist($parameters);

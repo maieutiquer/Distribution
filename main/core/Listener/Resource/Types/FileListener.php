@@ -11,6 +11,7 @@
 
 namespace Claroline\CoreBundle\Listener\Resource\Types;
 
+use Claroline\AppBundle\API\Options;
 use Claroline\AppBundle\API\SerializerProvider;
 use Claroline\AppBundle\Event\StrictDispatcher;
 use Claroline\AppBundle\Persistence\ObjectManager;
@@ -224,6 +225,11 @@ class FileListener
     public function onImportBefore(ImportObjectEvent $event)
     {
         $data = $event->getData();
+
+        if (isset($data['_destination'])) {
+            return;
+        }
+
         $replaced = json_encode($event->getExtra());
 
         $hashName = pathinfo($data['hashName'], PATHINFO_BASENAME);
@@ -246,6 +252,11 @@ class FileListener
         //get the filePath
         $exportEvent->addFile($newPath, $path);
         $exportEvent->overwrite('_path', $newPath);
+        $options = $exportEvent->getOptions();
+
+        if (in_array(Options::NO_HASH_REBUILD, $options)) {
+            $exportEvent->overwrite('_destination', $file->getHashName());
+        }
     }
 
     /**
@@ -255,15 +266,17 @@ class FileListener
     {
         $data = $event->getData();
         $bag = $event->getFileBag();
+
         if ($bag) {
             $fileSystem = new Filesystem();
             try {
                 $ds = DIRECTORY_SEPARATOR;
                 $fileSystem->copy($bag->get($data['_path']), $this->filesDir.$ds.$data['hashName']);
+		var_dump('copy to ' . $this->filesDir.$ds.$data['hashName']);
             } catch (\Exception $e) {
+		    var_dump($e->getMessage());
             }
         }
-        //move filebags elements here
     }
 
     /**
@@ -296,6 +309,7 @@ class FileListener
         try {
             copy($filePath, $newPath);
         } catch (\Exception $e) {
+		var_dump($e->getMessage());
             //do nothing yet
             //maybe log an error
         }

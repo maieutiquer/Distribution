@@ -30,12 +30,14 @@ class ExportObjectEvent extends Event
         $object,
         FileBag $fileBag,
         array $data = [],
-        Workspace $workspace = null
+        Workspace $workspace = null,
+        array $options = []
     ) {
         $this->object = $object;
         $this->data = $data;
         $this->fileBag = $fileBag;
         $this->workspace = $workspace;
+        $this->options = $options;
     }
 
     /**
@@ -71,6 +73,11 @@ class ExportObjectEvent extends Event
     public function getFileBag()
     {
         return $this->fileBag;
+    }
+
+    public function getOptions()
+    {
+        return $this->options;
     }
 
     public function overwrite($key, $value)

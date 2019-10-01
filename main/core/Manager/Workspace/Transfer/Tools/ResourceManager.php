@@ -12,11 +12,13 @@ use Claroline\AppBundle\Persistence\ObjectManager;
 use Claroline\BundleRecorder\Log\LoggableTrait;
 use Claroline\CoreBundle\Entity\Resource\ResourceNode;
 use Claroline\CoreBundle\Entity\User;
+use Claroline\CoreBundle\Entity\Resource\File;
 use Claroline\CoreBundle\Entity\Workspace\Workspace;
 use Claroline\CoreBundle\Event\ExportObjectEvent;
 use Claroline\CoreBundle\Event\ImportObjectEvent;
 use Claroline\CoreBundle\Manager\ResourceManager as ResManager;
 use Claroline\CoreBundle\Manager\UserManager;
+use Psr\Log\LogLevel;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 class ResourceManager implements ToolImporterInterface
@@ -69,7 +71,7 @@ class ResourceManager implements ToolImporterInterface
         if ($res) {
             $resource = array_merge(
                 $this->serializer->serialize($res, $resSerializeOptions),
-                ['_nodeId' => $root->getUuid(), '_class' => $node['meta']['className'], '_type' => $node['meta']['type']]
+                ['_nodeId' => $root->getUuid(), '_class' => $node['meta']['className'], '_type' => $node['meta']['type'], '_id' => $res->getId()]
             );
 
             $data['nodes'][] = $node;
@@ -88,6 +90,7 @@ class ResourceManager implements ToolImporterInterface
     public function prepareImport(array $orderedToolData, array $data): array
     {
         foreach ($orderedToolData['data']['resources'] as $serialized) {
+            $this->log('Prepare import for '.$serialized['_type']);
             $event = $this->dispatcher->dispatch(
                 'transfer.'.$serialized['_type'].'.import.before',
                 ImportObjectEvent::class,
@@ -118,8 +121,11 @@ class ResourceManager implements ToolImporterInterface
     private function deserializeNodes(array $nodes, Workspace $workspace)
     {
         $created = [];
+        $i = 1;
+        $total = count($nodes);
 
         foreach ($nodes as $data) {
+            $this->log('Deserialize node '.$data['id']."({$i}/{$total})");
             $rights = $data['rights'];
             unset($data['rights']);
             $node = $this->om->getObject($data, ResourceNode::class) ?? new ResourceNode();
@@ -140,6 +146,8 @@ class ResourceManager implements ToolImporterInterface
             }
 
             $this->om->persist($node);
+
+            ++$i;
         }
 
         return $created;
@@ -148,19 +156,50 @@ class ResourceManager implements ToolImporterInterface
     private function deserializeResources(array $resources, Workspace $workspace, array $nodes, FileBag $bag)
     {
         $this->om->startFlushSuite();
+        $i = 1;
+        $total = count($resources);
 
         foreach ($resources as $data) {
-            $resource = new $data['_class']();
-            $resource->setResourceNode($nodes[$data['_nodeId']]);
+            $this->log('Deserialize resource '.$data['_id']." for node {$nodes[$data['_nodeId']]->getId()} ({$i}/{$total})");
+
+	    /*
+	    if ($data['_class'] === File::class) {
+            $resource = $this->om->getRepository($data['_class'])->findOneByHashName($data['hashName']) ?? new $data['_class']();
+	    } else {
+
+            $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
+	    }*/
+
+
+            $resource = $this->om
+                ->getRepository($nodes[$data['_nodeId']]->getClass())
+                ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]) ?? new $data['_class']();
+
+            //if (!$hasNode) {
+            //} else {
+            //  $this->log('Node '.$data['_nodeId'].' already has a resource', LogLevel::ERROR);
+            //}
+
             $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
             $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);
+
+            $resource->setResourceNode($nodes[$data['_nodeId']]);
+
             $this->dispatchCrud('create', 'post', [$resource, [Options::WORKSPACE_COPY]]);
             $this->dispatcher->dispatch(
                 'transfer.'.$data['_type'].'.import.after',
                 ImportObjectEvent::class,
                 [$bag, $data, $resource, null, $workspace]
             );
+
             $this->om->persist($resource);
+
+            if (0 === $i % 1000) {
+                $this->log('Flushing...');
+                $this->om->forceFlush();
+            }
+
+            ++$i;
         }
 
         $this->om->endFlushSuite();
@@ -178,7 +217,7 @@ class ResourceManager implements ToolImporterInterface
             $new = $this->dispatcher->dispatch(
                 'transfer.'.$node->getResourceType()->getName().'.export',
                 ExportObjectEvent::class,
-                [$resource, $event->getFileBag(), $serialized, $event->getWorkspace()]
+                [$resource, $event->getFileBag(), $serialized, $event->getWorkspace(), $event->getOptions()]
             );
 
             $event->overwrite('resources.'.$key, $new->getData());
