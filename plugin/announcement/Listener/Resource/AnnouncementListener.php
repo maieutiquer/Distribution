@@ -138,7 +138,7 @@ class AnnouncementListener
         //just in case
         if ($announcement) {
             foreach ($data['posts'] as $post) {
-		$newAnnouncement = $this->om->getRepository(Announcement::class)->findOneBy(['aggregate' => $announcement, 'content' => $post['content']]) ?? new Announcement();
+                $newAnnouncement = $this->om->getRepository(Announcement::class)->findOneBy(['aggregate' => $announcement, 'content' => $post['content']]) ?? new Announcement();
                 $announce = $this->serializer->deserialize($post, $newAnnouncement, [Options::REFRESH_UUID]);
                 $this->om->persist($announce);
                 $announce->setAggregate($announcement);
