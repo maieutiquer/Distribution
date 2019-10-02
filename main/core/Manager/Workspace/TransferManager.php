@@ -247,6 +247,7 @@ class TransferManager
             if ($workspace->getId() && $tool) {
                 $orderedTool = $this->om->getRepository(OrderedTool::class)->findOneBy(['workspace' => $workspace->getId(), 'tool' => $tool->getId()]) ?? new OrderedTool();
             } else {
+                $this->log('Tool '.$orderedToolData['tool'].' not found');
                 $orderedTool = new OrderedTool();
             }
 
