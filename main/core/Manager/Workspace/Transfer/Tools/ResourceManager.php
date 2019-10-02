@@ -12,13 +12,11 @@ use Claroline\AppBundle\Persistence\ObjectManager;
 use Claroline\BundleRecorder\Log\LoggableTrait;
 use Claroline\CoreBundle\Entity\Resource\ResourceNode;
 use Claroline\CoreBundle\Entity\User;
-use Claroline\CoreBundle\Entity\Resource\File;
 use Claroline\CoreBundle\Entity\Workspace\Workspace;
 use Claroline\CoreBundle\Event\ExportObjectEvent;
 use Claroline\CoreBundle\Event\ImportObjectEvent;
 use Claroline\CoreBundle\Manager\ResourceManager as ResManager;
 use Claroline\CoreBundle\Manager\UserManager;
-use Psr\Log\LogLevel;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 class ResourceManager implements ToolImporterInterface
@@ -64,11 +62,11 @@ class ResourceManager implements ToolImporterInterface
     private function recursiveSerialize(ResourceNode $root, array $options, array $data = ['nodes' => [], 'resources' => []])
     {
         $node = $this->serializer->serialize($root, array_merge($options, [Options::SERIALIZE_MINIMAL]));
-	try {
-        $resSerializer = $this->serializer->get($root->getClass());
-	} catch (\Exception $e) {
-		return $data;
-	}
+        try {
+            $resSerializer = $this->serializer->get($root->getClass());
+        } catch (\Exception $e) {
+            return $data;
+        }
         $resSerializeOptions = method_exists($resSerializer, 'getCopyOptions') ? $resSerializer->getCopyOptions()['serialize'] : [];
         $res = $this->om->getRepository($root->getClass())->findOneBy(['resourceNode' => $root]);
 
@@ -113,9 +111,9 @@ class ResourceManager implements ToolImporterInterface
         $this->deserializeResources($data['resources'], $workspace, $created, $bag);
 
         //$root = $this->resourceManager->getWorkspaceRoot($workspace);
-	$roots = $this->om->getRepository(ResourceNode::class)->findBy(['parent' => null, 'workspace' => $workspace]);
+        $roots = $this->om->getRepository(ResourceNode::class)->findBy(['parent' => null, 'workspace' => $workspace]);
 
-	foreach ($roots as $root) {
+        foreach ($roots as $root) {
             $root->setName($workspace->getName());
             $this->om->persist($root);
         }
@@ -167,23 +165,9 @@ class ResourceManager implements ToolImporterInterface
         foreach ($resources as $data) {
             $this->log('Deserialize resource '.$data['_id']." for node {$nodes[$data['_nodeId']]->getId()} ({$i}/{$total})");
 
-	    /*
-	    if ($data['_class'] === File::class) {
-            $resource = $this->om->getRepository($data['_class'])->findOneByHashName($data['hashName']) ?? new $data['_class']();
-	    } else {
-
-            $resource = $this->om->getRepository($data['_class'])->findOneById($data['_id']) ?? new $data['_class']();
-	    }*/
-
-
             $resource = $this->om
                 ->getRepository($nodes[$data['_nodeId']]->getClass())
                 ->findOneBy(['resourceNode' => $nodes[$data['_nodeId']]]) ?? new $data['_class']();
-
-            //if (!$hasNode) {
-            //} else {
-            //  $this->log('Node '.$data['_nodeId'].' already has a resource', LogLevel::ERROR);
-            //}
 
             $this->dispatchCrud('create', 'pre', [$resource, [Options::WORKSPACE_COPY]]);
             $this->serializer->deserialize($data, $resource, [Options::REFRESH_UUID]);

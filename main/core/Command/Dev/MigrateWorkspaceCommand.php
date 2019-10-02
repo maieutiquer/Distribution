@@ -24,7 +24,6 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Input\InputOption;
 
 /**
  * Creates an user, optionaly with a specific role (default to simple user).
@@ -61,7 +60,7 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
-	ini_set('default_socket_timeout', 450); 
+        ini_set('default_socket_timeout', 450);
         //get the workspace id from the code
         if ($input->getOption('is_file')) {
             $data = json_decode(file_get_contents($input->getArgument('url')), true);
@@ -95,14 +94,14 @@ class MigrateWorkspaceCommand extends ContainerAwareCommand implements AdminCliC
         $this->getContainer()->get('claroline.manager.workspace.transfer')->setLogger($consoleLogger);
         $this->getContainer()->get('claroline.manager.workspace.transfer')->deserialize($data, $workspace, [Options::NO_HASH_REBUILD], $fileBag);
         $managerRole = $om->getRepository(Role::class)->findOneBy(['workspace' => $workspace, 'translationKey' => 'manager']);
-	if (!$managerRole) {
-	   $managerRole = $this->getContainer()->get('claroline.manager.role_manager')->createWorkspaceRole(
-	       'ROLE_WS_MANAGER_' . $workspace->getUuid(),
-	       'manager',
+        if (!$managerRole) {
+            $managerRole = $this->getContainer()->get('claroline.manager.role_manager')->createWorkspaceRole(
+           'ROLE_WS_MANAGER_'.$workspace->getUuid(),
+           'manager',
                $workspace,
-	       true
-	   );
-	}
+           true
+       );
+        }
         $creator->addRole($managerRole);
         $om->persist($creator);
         $om->flush();
