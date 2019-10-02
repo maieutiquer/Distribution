@@ -244,7 +244,12 @@ class TransferManager
 
         foreach ($data['orderedTools'] as $orderedToolData) {
             $tool = $this->om->getRepository(Tool::class)->findOneByName($orderedToolData['tool']);
-            $orderedTool = $this->om->getRepository(OrderedTool::class)->findOneBy(['workspace' => $workspace->getId(), 'tool' => $tool->getId()]) ?? new OrderedTool();
+            if ($workspace->getId() && $tool->getId()) {
+                $orderedTool = $this->om->getRepository(OrderedTool::class)->findOneBy(['workspace' => $workspace->getId(), 'tool' => $tool->getId()]) ?? new OrderedTool();
+            } else {
+                $orderedTool = new OrderedTool();
+            }
+
             $this->ots->setLogger($this->logger);
             $this->ots->deserialize($orderedToolData, $orderedTool, [], $workspace, $bag);
         }
