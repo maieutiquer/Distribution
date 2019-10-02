@@ -244,7 +244,7 @@ class TransferManager
 
         foreach ($data['orderedTools'] as $orderedToolData) {
             $tool = $this->om->getRepository(Tool::class)->findOneByName($orderedToolData['tool']);
-            if ($workspace->getId() && $tool->getId()) {
+            if ($workspace->getId() && $tool) {
                 $orderedTool = $this->om->getRepository(OrderedTool::class)->findOneBy(['workspace' => $workspace->getId(), 'tool' => $tool->getId()]) ?? new OrderedTool();
             } else {
                 $orderedTool = new OrderedTool();
