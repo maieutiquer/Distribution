@@ -163,7 +163,9 @@ class ResourceManager implements ToolImporterInterface
         $total = count($resources);
 
         foreach ($resources as $data) {
-            $this->log('Deserialize resource '.$data['_id']." for node {$nodes[$data['_nodeId']]->getId()} ({$i}/{$total})");
+            if (isset($data['_id'])) {
+                $this->log('Deserialize resource '.$data['_id']." for node {$nodes[$data['_nodeId']]->getId()} ({$i}/{$total})");
+            }
 
             $resource = $this->om
                 ->getRepository($nodes[$data['_nodeId']]->getClass())
