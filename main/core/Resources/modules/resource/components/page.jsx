@@ -82,6 +82,8 @@ class ResourcePage extends Component {
     ].concat(this.props.routes)
 	  console.log(this.props.resourceNode)
 
+	  console.log(this.props.resourceNode)
+
     return (
       <ToolPage
         className={classes('resource-page', `${this.props.resourceNode.meta.type}-page`)}

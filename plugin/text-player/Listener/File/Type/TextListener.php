@@ -28,9 +28,16 @@ class TextListener
      */
     public function onLoad(LoadFileEvent $event)
     {
+	try {
+	    $content = utf8_encode(file_get_contents($event->getPath()));
+        } catch (\Exception $e)
+        {
+	    $content = 'file not found';
+        }
+
         $event->setData([
             'isHtml' => 'text/html' === $event->getResource()->getMimeType(),
-            'content' => utf8_encode(file_get_contents($event->getPath())),
+            'content' => $content,
         ]);
 
         $event->stopPropagation();
