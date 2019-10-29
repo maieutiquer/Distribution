@@ -11,10 +11,10 @@
 
 namespace Claroline\MigrationBundle\Generator;
 
-use Symfony\Component\HttpKernel\Bundle\Bundle;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Tools\SchemaTool;
-use Doctrine\DBAL\Platforms\AbstractPlatform;
+use Symfony\Component\HttpKernel\Bundle\Bundle;
 
 /**
  * Class responsible for generating bundle migration queries.
@@ -26,7 +26,7 @@ class Generator
 
     private $em;
     private $schemaTool;
-    private $schemas = array();
+    private $schemas = [];
 
     /**
      * Constructor.
@@ -55,15 +55,15 @@ class Generator
         $toSchema = $schemas['toSchema'];
 
         $bundleTables = $this->getBundleTables($bundle, $schemas['metadata']);
-        $this->filterSchemas(array($fromSchema, $toSchema), $bundleTables);
+        $this->filterSchemas([$fromSchema, $toSchema], $bundleTables);
 
         $upQueries = $fromSchema->getMigrateToSql($toSchema, $platform);
         $downQueries = $fromSchema->getMigrateFromSql($toSchema, $platform);
 
-        return array(
+        return [
             self::QUERIES_UP => $upQueries,
             self::QUERIES_DOWN => $downQueries,
-        );
+        ];
     }
 
     /**
@@ -75,23 +75,23 @@ class Generator
      */
     public function getSchemas()
     {
-        if (count($this->schemas) === 0) {
+        if (0 === count($this->schemas)) {
             $this->schemas['metadata'] = $this->em->getMetadataFactory()->getAllMetadata();
             $this->schemas['fromSchema'] = $this->em->getConnection()->getSchemaManager()->createSchema();
             $this->schemas['toSchema'] = $this->schemaTool->getSchemaFromMetadata($this->schemas['metadata']);
         }
 
         // cloning schemas is much more ligther than re-generating them for each platform
-        return array(
+        return [
             'fromSchema' => clone $this->schemas['fromSchema'],
             'toSchema' => clone $this->schemas['toSchema'],
             'metadata' => $this->schemas['metadata'],
-        );
+        ];
     }
 
     private function getBundleTables(Bundle $bundle, array $metadata)
     {
-        $bundleTables = array('tables' => array(), 'joinTables' => array());
+        $bundleTables = ['tables' => [], 'joinTables' => []];
 
         foreach ($metadata as $entityMetadata) {
             if (0 === strpos($entityMetadata->name, $bundle->getNamespace())) {

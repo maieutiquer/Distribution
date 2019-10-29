@@ -323,3 +323,10 @@ services:
     Claroline\CoreBundle\Doctrine\EntityListenerResolver:
         arguments:
             - '@service_container'
+
+    Claroline\CoreBundle\Listener\Entity\MappingListener:
+        arguments:
+            - '@Claroline\AppBundle\Manager\DatabaseManager'
+            - '@Claroline\AppBundle\Persistence\ObjectManager'
+        tags:
+            - { name: doctrine.event_listener, event: loadClassMetadata }

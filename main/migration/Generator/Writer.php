@@ -11,11 +11,11 @@
 
 namespace Claroline\MigrationBundle\Generator;
 
-use Twig_Environment;
+use Claroline\MigrationBundle\Twig\SqlFormatterExtension;
+use Symfony\Bundle\TwigBundle\TwigEngine;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
-use Symfony\Bundle\TwigBundle\TwigEngine;
-use Claroline\MigrationBundle\Twig\SqlFormatterExtension;
+use Twig_Environment;
 
 /**
  * Class responsible for writing bundle migration queries in a migration class file.
@@ -70,12 +70,12 @@ class Writer
 
         $content = $this->twigEngine->render(
             'ClarolineMigrationBundle::migration_class.html.twig',
-            array(
+            [
                 'namespace' => $namespace,
                 'class' => $class,
                 'upQueries' => $queries[Generator::QUERIES_UP],
                 'downQueries' => $queries[Generator::QUERIES_DOWN],
-            )
+            ]
         );
 
         $this->fileSystem->touch($classFile);
@@ -95,12 +95,12 @@ class Writer
     public function deleteUpperMigrationClasses(Bundle $bundle, $driverName, $referenceVersion)
     {
         $migrations = new \DirectoryIterator("{$bundle->getPath()}/Migrations/{$driverName}");
-        $deletedVersions = array();
+        $deletedVersions = [];
 
         foreach ($migrations as $migration) {
             if (preg_match('#Version(\d+)\.php#', $migration->getFilename(), $matches)) {
                 if ($matches[1] > $referenceVersion) {
-                    $this->fileSystem->remove(array($migration->getPathname()));
+                    $this->fileSystem->remove([$migration->getPathname()]);
                     $deletedVersions[] = $migration->getFilename();
                 }
             }

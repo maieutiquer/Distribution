@@ -10,6 +10,7 @@ services:
             - '@doctrine.dbal.default_connection'
             - '@Claroline\AppBundle\API\FinderProvider'
             - '%claroline.param.archive_directory%'
+            - '@claroline.migration.doctrine_schema_tool'
 
     claroline.manager.database_manager:
         alias: Claroline\AppBundle\Manager\DatabaseManager

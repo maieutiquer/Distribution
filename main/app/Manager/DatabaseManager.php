@@ -7,6 +7,8 @@ use Claroline\AppBundle\API\Options;
 use Claroline\AppBundle\Persistence\ObjectManager;
 use Claroline\BundleRecorder\Log\LoggableTrait;
 use Claroline\CoreBundle\Entity\DatabaseBackup;
+use Doctrine\DBAL\Driver\PDOMySql\Driver;
+use Doctrine\ORM\Tools\SchemaTool;
 use Psr\Log\LogLevel;
 
 class DatabaseManager
@@ -15,12 +17,14 @@ class DatabaseManager
 
     private $kernel;
 
-    public function __construct(ObjectManager $om, $conn, FinderProvider $finder, $archiveDir)
+    public function __construct(ObjectManager $om, $conn, FinderProvider $finder, $archiveDir, SchemaTool $tool)
     {
+        $this->isLoadingMetaData = false;
         $this->om = $om;
         $this->conn = $conn;
         $this->finder = $finder;
         $this->archiveDir = $archiveDir;
+        $this->schemaTool = $tool;
     }
 
     public function backupRows($class, $searches, $tableName, $batch = null, $selfRemove = false, $dumpCsv = true)
@@ -114,6 +118,37 @@ class DatabaseManager
             } catch (\Exception $e) {
                 $this->log('Couldnt drop '.$table.' '.$e->getMessage());
             }
+        }
+    }
+
+    public function tableExists($tableName)
+    {
+        $schemaManager = $this->conn->getSchemaManager();
+
+        return $schemaManager->tablesExist([$tableName]);
+    }
+
+    public function createTable($tableName, $classMetaData)
+    {
+        $driver = new Driver();
+        $platform = $driver->getDatabasePlatform();
+        $fromSchema = $this->conn->getSchemaManager()->createSchema();
+        $toSchema = $this->schemaTool->getSchemaFromMetadata([$classMetaData]);
+        $schemas['fromSchema'] = $fromSchema;
+        $schemas['toSchema'] = $toSchema;
+
+        foreach ($schemas as $schema) {
+            foreach ($schema->getTables() as $table) {
+                if ($table->getName() !== $tableName) {
+                    $schema->dropTable($table->getName());
+                }
+            }
+        }
+
+        $upQueries = $fromSchema->getMigrateToSql($toSchema, $platform);
+
+        foreach ($upQueries as $query) {
+            $this->conn->query($query);
         }
     }
 }
