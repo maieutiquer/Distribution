@@ -38,7 +38,7 @@ class HomeExternalAccountComponent extends Component {
   render() {
     return (
       <PageSimple
-        className="authentication-page login-page"
+        className="authentication-page"
       >
         {this.state.sso &&
           <div className={classes('external-link-container', this.props.serviceName)}>

@@ -4,17 +4,15 @@ import React from 'react'
 import {PropTypes as T} from 'prop-types'
 
 import {withRouter} from '#/main/app/router'
-import {PageSimple} from '#/main/app/page/components/simple'
 
+import {SecurityPage} from '#/main/app/security/containers/page'
 import {constants} from '#/main/app/security/login/constants'
 import {LoginForm} from '#/main/app/security/login/containers/form'
 
 import {route as workspaceRoute} from '#/main/core/workspace/routing'
 
 const LoginPage = (props) =>
-  <PageSimple
-    className="authentication-page login-page"
-  >
+  <SecurityPage>
     <LoginForm
       onLogin={(response) => {
         if (response.redirect) {
@@ -35,7 +33,7 @@ const LoginPage = (props) =>
         }
       }}
     />
-  </PageSimple>
+  </SecurityPage>
 
 LoginPage.propTypes = {
   history: T.shape({
