@@ -932,7 +932,7 @@ class ClacoFormController extends Controller
             return new JsonResponse(null, 404);
         }
         $response = new StreamedResponse();
-        $path = $this->filesDir.DIRECTORY_SEPARATOR.$data['url'];
+        $path = $this->filesDir.DIRECTORY_SEPARATOR.preg_replace('#^\.\.\/files\/#', '', $data['url']); // TODO : files part should not be stored in the DB
         $response->setCallBack(
             function () use ($path) {
                 readfile($path);
