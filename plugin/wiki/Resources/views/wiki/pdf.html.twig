@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <title>{{ _resource.resourceNode.name ~ '.pdf' }}</title>
-    <link rel="stylesheet" type="text/css" href="{{ themeAsset('claroline-distribution-plugin-wiki-wiki-resource-pdf.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ app.request.getSchemeAndHttpHost() ~ themeAsset('claroline-distribution-plugin-wiki-wiki-resource-pdf.css') }}" />
 </head>
 <body>
     <div class="page-header">
