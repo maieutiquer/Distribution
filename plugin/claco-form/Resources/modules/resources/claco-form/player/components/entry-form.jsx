@@ -14,6 +14,7 @@ import {selectors as formSelect} from '#/main/app/content/form/store/selectors'
 import {actions as formActions} from '#/main/app/content/form/store/actions'
 import {CALLBACK_BUTTON, LINK_BUTTON} from '#/main/app/buttons'
 import {FormData} from '#/main/app/content/form/containers/data'
+import {notEmpty} from '#/main/core/validation'
 import {Form} from '#/main/app/content/form/components/form'
 import {DataInput} from '#/main/app/data/components/input'
 
@@ -360,6 +361,19 @@ const EntryForm = withRouter(connect(
   }),
   (dispatch) => ({
     saveForm(entry, isNew, navigate) {
+      // validate required fields
+      // TODO : this should be done by standard form validation (it's broken atm)
+      const errors = {
+        title: notEmpty(entry.title),
+        values: {}
+      }
+      const requiredFields = fields.filter(field => field.required)
+      errors.values = requiredFields.reduce((fieldErrors, field) => Object.assign(fieldErrors, {
+        [field.id]: notEmpty(entry.values[field.id])
+      }), {})
+
+      dispatch(formActions.setErrors(selectors.STORE_NAME+'.entries.current', errors))
+      
       if (isNew) {
         dispatch(formActions.saveForm(selectors.STORE_NAME+'.entries.current', ['apiv2_clacoformentry_create'])).then(
           (data) => {
