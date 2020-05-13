@@ -360,7 +360,7 @@ const EntryForm = withRouter(connect(
     keywords: selectors.keywords(state)
   }),
   (dispatch) => ({
-    saveForm(entry, isNew, navigate) {
+    saveForm(entry, fields, isNew, navigate) {
       // validate required fields
       // TODO : this should be done by standard form validation (it's broken atm)
       const errors = {
