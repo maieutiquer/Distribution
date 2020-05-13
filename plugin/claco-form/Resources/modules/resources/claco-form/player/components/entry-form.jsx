@@ -242,7 +242,7 @@ class EntryFormComponent extends Component {
             validating={this.props.validating}
             save={{
               type: CALLBACK_BUTTON,
-              callback: () => this.props.saveForm(this.props.entry, this.props.isNew, this.props.history.push)
+              callback: () => this.props.saveForm(this.props.entry, this.props.fields, this.props.isNew, this.props.history.push)
             }}
             cancel={{
               type: LINK_BUTTON,
@@ -287,7 +287,7 @@ class EntryFormComponent extends Component {
             sections={this.getSections()}
             save={{
               type: CALLBACK_BUTTON,
-              callback: () => this.props.saveForm(this.props.entry, this.props.isNew, this.props.history.push)
+              callback: () => this.props.saveForm(this.props.entry, this.props.fields, this.props.isNew, this.props.history.push)
             }}
             cancel={{
               type: LINK_BUTTON,
