@@ -64,7 +64,7 @@ class Update1205Command extends ContainerAwareCommand
         //this is the list of regexes we'll need to use
         $regexes = [
             // home tabs
-            '\/workspaces\/([0-9]+)\/open\/tool\/home#\/tab\/([^\/^"]+)' => [
+            '\/workspaces\/([0-9]+)\/open\/tool\/home#\/tab\/([^\/^"^#^&^<^>]+)' => [
                 '#/desktop/workspaces/open/:wslug/home/:nslug',
                 [null, 'Claroline\CoreBundle\Entity\Tab\HomeTab'],
             ],
@@ -89,7 +89,7 @@ class Update1205Command extends ContainerAwareCommand
                 [null, 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
             ],
             //show is type then id or uuid
-            '\/resources\/show\/([^\/^"]*)' => [
+            '\/resources\/show\/(^\/^"^#^&^<^>]+)' => [
                 '#/desktop/workspaces/open/:wslug/resources/:nslug',
                 [null, 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
             ],
