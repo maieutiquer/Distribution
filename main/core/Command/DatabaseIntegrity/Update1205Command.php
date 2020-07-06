@@ -12,8 +12,7 @@
 namespace Claroline\CoreBundle\Command\DatabaseIntegrity;
 
 use Claroline\AppBundle\Logger\ConsoleLogger;
-use Claroline\CoreBundle\Entity\Resource\ResourceNode;
-use Claroline\CoreBundle\Entity\Workspace\Workspace;
+use Claroline\AppBundle\Persistence\ObjectManager;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Query\ResultSetMappingBuilder;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
@@ -57,46 +56,45 @@ class Update1205Command extends ContainerAwareCommand
             'Claroline\ForumBundle\Entity\Message' => ['content'],
         ];
 
-        $endOfUrl = '[^"^#^&^<]';
+        $endOfUrl = '[^"^#^&^<^>]';
 
         //this is the list of regexes we'll need to use
         $regexes = [
-          //open can be id
-          '\/workspaces\/([\d]+)\/open"' => [
-              '#/desktop/workspaces/open/:wslug',
-              ['Claroline\CoreBundle\Entity\Workspace\Workspace'],
-          ],
-          //open can be id
-          '\/workspaces\/([\d]+)\/open\/tool\('.$endOfUrl.'*)' => [
-              '#/desktop/workspaces/open/:wslug',
-              ['Claroline\CoreBundle\Entity\Workspace\Workspace'],
-          ],
-          //open can be uuid or id
-          '\/resource\/open\/([^\/]*)"' => [
-            '#/desktop/workspaces/open/:wslug/resources/:nslug',
-            ['Claroline\CoreBundle\Entity\Resource\ResourceNode'],
-          ],
-          //open can be uuid or id (resource type then id)
-          '\/resource\/open\/([^\/]+)\/('.$endOfUrl.'*)' => [
-            '#/desktop/workspaces/open/:wslug/resources/:nslug',
-            [null, 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
-          ],
-          //show is type then id or uuid
-          '\/resources\/show\/([^\/]*)"' => [
-            '#/desktop/workspaces/open/:wslug/resources/:nslug',
-            [
-              null,
-              'Claroline\CoreBundle\Entity\Resource\ResourceNode',
+            // home tabs
+            '\/workspaces\/([0-9]+)\/open\/tool\/home#\/tab\/([^\/^"^#^&^<^>]+)' => [
+                '#/desktop/workspaces/open/:slug0/home/:slug1',
+                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Tab\HomeTab'],
             ],
-          ],
-          //show is type then id or uuid
-          '\/resources\/show\/([^\/]*)\/('.$endOfUrl.'*)' => [
-            '#/desktop/workspaces/open/:wslug/resources/:nslug',
-            [
-              null,
-              'Claroline\CoreBundle\Entity\Resource\ResourceNode',
+            //open can be id
+            '\/workspaces\/([0-9]+)\/open\/tool\('.$endOfUrl.'*)' => [
+                '#/desktop/workspaces/open/:slug0',
+                ['Claroline\CoreBundle\Entity\Workspace\Workspace'],
             ],
-          ],
+            //open can be id
+            '\/workspaces\/([0-9]+)\/open' => [
+                '#/desktop/workspaces/open/:slug0',
+                ['Claroline\CoreBundle\Entity\Workspace\Workspace'],
+            ],
+            //open can be uuid or id
+            '\/resource\/open\/([^\/^"^#^&^<^>]+)' => [
+                '#/desktop/workspaces/open/:slug0/resources/:slug1',
+                ['Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //open can be uuid or id (resource type then id)
+            '\/resource\/open\/([^\/]+)\/('.$endOfUrl.'*)' => [
+                '#/desktop/workspaces/open/:slug0/resources/:slug1',
+                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //show is type then id or uuid
+            '\/resources\/show\/(^\/^"^#^&^<^>]+)' => [
+                '#/desktop/workspaces/open/:slug0/resources/:slug1',
+                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //show is type then id or uuid
+            '\/resources\/show\/([^\/]*)\/('.$endOfUrl.'*)' => [
+                '#/desktop/workspaces/open/:slug0/resources/:slug1',
+                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
         ];
 
         foreach ($parsableEntities as $class => $properties) {
@@ -144,59 +142,42 @@ class Update1205Command extends ContainerAwareCommand
         }
     }
 
-    public function replace($regex, $replacement, $text, $prefix, $show = false)
+    public function replace($regex, $replacement, $text, $prefix = '', $show = false)
     {
+        /** @var ObjectManager $om */
         $om = $this->getContainer()->get('Claroline\AppBundle\Persistence\ObjectManager');
         $matches = [];
-        preg_match('!'.$regex.'!', $text, $matches, PREG_OFFSET_CAPTURE);
-        array_shift($matches);
+        preg_match_all('!'.$prefix.$regex.'!', $text, $matches);
 
-        $regexError = true;
+        $newText = $text;
+        if (!empty($matches)) {
+            foreach ($matches[0] as $pathIndex => $fullPath) {
+                $this->log('Found path : '.$fullPath);
 
-        //if (count($matches)) {
-        foreach ($replacement[1] as $pos => $class) {
-            if ($class) {
-                if (isset($matches[$pos][0])) {
-                    $this->log('Finding resource of class '.$class.' with identifier '.$matches[$pos][0]);
-                    $object = $om->getRepository($class)->find($matches[$pos][0]);
+                $newPath = $replacement[0];
+                foreach ($replacement[1] as $pos => $class) {
+                    $id = trim($matches[$pos + 1][$pathIndex]);
 
+                    $this->log('Finding resource of class '.$class.' with identifier '.$id);
+                    $object = $om->find($class, $id);
                     if ($object) {
-                        $regexError = false;
-                        if (Workspace::class === $class) {
-                            $replacement[0] = str_replace(':wslug', $object->getSlug(), $replacement[0]);
-                        }
-
-                        if (ResourceNode::class === $class) {
-                            if ($object->getWorkspace()) {
-                                $replacement[0] = str_replace(':nslug', $object->getSlug(), $replacement[0]);
-                                $replacement[0] = str_replace(':wslug', $object->getWorkspace()->getSlug(), $replacement[0]);
-                            } else {
-                                $this->error('Resource '.$matches[$pos][0].' has no workspace');
-                            }
-                        }
+                        $newPath = str_replace(':slug'.$pos, $object->getSlug(), $newPath);
                     } else {
                         $this->error('Could not find object... skipping');
+                        break 2; // go to next path, don't try any other replacement
                     }
                 }
+
+                $newText = str_replace($fullPath, $newPath, $newText);
             }
         }
 
-        $regex = $prefix.$regex;
-
-        if ($regexError) {
-            $this->error('Could not find some objects for replacing ids by slugs');
-        } else {
-            $this->log('Replacing '.$replacement[0].' using regex '.$regex);
-            if ($show) {
-                $this->log('Old text: '.$text);
-            }
-            $text = preg_replace('!'.$regex.'!', $replacement[0], $text);
-            if ($show) {
-                $this->log('New text: '.$text);
-            }
+        if ($show) {
+            $this->log('Old text: '.$text);
+            $this->log('New text: '.$newText);
         }
 
-        return $text;
+        return $newText;
     }
 
     private function setLogger($logger)

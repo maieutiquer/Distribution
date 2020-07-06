@@ -96,6 +96,15 @@ class HomeTab
         $this->widgetContainers = new ArrayCollection();
     }
 
+    public function getSlug()
+    {
+        if (!empty($this->homeTabConfigs) && !empty($this->homeTabConfigs[0]) && !empty($this->homeTabConfigs[0]->getLongTitle())) {
+            return substr(strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $this->homeTabConfigs[0]->getLongTitle()))), 0, 128);
+        }
+
+        return 'new';
+    }
+
     public function getType()
     {
         return $this->type;

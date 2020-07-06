@@ -124,7 +124,7 @@ class HomeTabSerializer
         $data = [
             'id' => $homeTab->getUuid(),
             'title' => $homeTabConfig->getName(),
-            'slug' => $homeTabConfig->getLongTitle() ? substr(strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $homeTabConfig->getLongTitle()))), 0, 128) : 'new',
+            'slug' => $homeTab->getSlug(),
             'longTitle' => $homeTabConfig->getLongTitle(),
             'centerTitle' => $homeTabConfig->isCenterTitle(),
             'poster' => $poster,
@@ -226,7 +226,6 @@ class HomeTabSerializer
                 if (isset($widgetContainerData['id'])) {
                     $widgetContainer = $homeTab->getWidgetContainer($widgetContainerData['id']);
                 }
-
                 if (empty($widgetContainer)) {
                     $widgetContainer = new WidgetContainer();
                 }
