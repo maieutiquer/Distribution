@@ -13,8 +13,9 @@ namespace Claroline\CoreBundle\Command\DatabaseIntegrity;
 
 use Claroline\AppBundle\Logger\ConsoleLogger;
 use Claroline\AppBundle\Persistence\ObjectManager;
+use Doctrine\DBAL\Driver\Connection;
+use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\EntityManager;
-use Doctrine\ORM\Query\ResultSetMappingBuilder;
 use Symfony\Bundle\FrameworkBundle\Command\ContainerAwareCommand;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -23,6 +24,21 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class Update1205Command extends ContainerAwareCommand
 {
+    private $consoleLogger;
+
+    const ENTITIES = [
+        'Claroline\CoreBundle\Entity\Content' => ['content'],
+        'Claroline\CoreBundle\Entity\Resource\Revision' => ['content'],
+        'Claroline\AgendaBundle\Entity\Event' => ['description'],
+        'Claroline\AnnouncementBundle\Entity\Announcement' => ['content'],
+        'Innova\PathBundle\Entity\Path\Path' => ['description'],
+        'Innova\PathBundle\Entity\Step' => ['description'],
+        'Claroline\CoreBundle\Entity\Widget\Type\SimpleWidget' => ['content'],
+        'UJM\ExoBundle\Entity\Exercise' => ['endMessage'],
+        'UJM\ExoBundle\Entity\Item\Item' => ['content'],
+        'Claroline\ForumBundle\Entity\Message' => ['content'],
+    ];
+
     protected function configure()
     {
         $this->setName('claroline:routes:12.5')
@@ -31,6 +47,7 @@ class Update1205Command extends ContainerAwareCommand
                 new InputArgument('base_path', InputArgument::OPTIONAL, 'The value'),
             ])
             ->addOption('force', 'f', InputOption::VALUE_NONE, 'If not force, command goes dry run')
+            ->addOption('fix', null, InputOption::VALUE_REQUIRED, 'Will run converter from a backup database (used to fix a previous buggy converter.)')
             ->addOption('show-text', 's', InputOption::VALUE_NONE, 'Show the replaced texts');
     }
 
@@ -39,110 +56,87 @@ class Update1205Command extends ContainerAwareCommand
         $consoleLogger = ConsoleLogger::get($output);
         $this->setLogger($consoleLogger);
 
+        /** @var EntityManager $em */
+        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
+
         $this->log('Updating routes in database rich text');
-        $prefix = $input->getArgument('base_path');
-        //the list is probably incomplete, but it is a start
+        $prefix = $input->getArgument('base_path') ?? '';
 
-        $parsableEntities = [
-            'Claroline\CoreBundle\Entity\Content' => ['content'],
-            'Claroline\CoreBundle\Entity\Resource\Revision' => ['content'],
-            'Claroline\AgendaBundle\Entity\Event' => ['description'],
-            'Claroline\AnnouncementBundle\Entity\Announcement' => ['content'],
-            'Innova\PathBundle\Entity\Path\Path' => ['description'],
-            'Innova\PathBundle\Entity\Step' => ['description'],
-            'Claroline\CoreBundle\Entity\Widget\Type\SimpleWidget' => ['content'],
-            'UJM\ExoBundle\Entity\Exercise' => ['endMessage'],
-            'UJM\ExoBundle\Entity\Item\Item' => ['content'],
-            'Claroline\ForumBundle\Entity\Message' => ['content'],
-        ];
+        if ($input->getOption('fix')) {
+            $this->fix($input->getOption('fix'), $prefix, $input->getOption('show-text'), $input->getOption('force'));
+        } else {
+            foreach (static::ENTITIES as $class => $properties) {
+                foreach ($properties as $property) {
+                    foreach ($this->getPathsToReplace() as $regex => $replacement) {
+                        $data = $this->search($em->getConnection(), $class, $property, $regex);
+                        foreach ($data as $i => $result) {
+                            $text = $this->replace($regex, $replacement, $result['content'], $prefix, $input->getOption('show-text'));
 
-        $endOfUrl = '[^"^#^&^<^>]';
+                            if ($input->getOption('force')) {
+                                $this->log('Updating '.$i.'/'.count($data));
 
-        //this is the list of regexes we'll need to use
-        $regexes = [
-            // home tabs
-            '\/workspaces\/([0-9]+)\/open\/tool\/home#\/tab\/([^\/^"^#^&^<^>]+)' => [
-                '#/desktop/workspaces/open/:slug0/home/:slug1',
-                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Tab\HomeTab'],
-            ],
-            //open can be id
-            '\/workspaces\/([0-9]+)\/open\/tool\('.$endOfUrl.'*)' => [
-                '#/desktop/workspaces/open/:slug0',
-                ['Claroline\CoreBundle\Entity\Workspace\Workspace'],
-            ],
-            //open can be id
-            '\/workspaces\/([0-9]+)\/open' => [
-                '#/desktop/workspaces/open/:slug0',
-                ['Claroline\CoreBundle\Entity\Workspace\Workspace'],
-            ],
-            //open can be uuid or id
-            '\/resource\/open\/([^\/^"^#^&^<^>]+)' => [
-                '#/desktop/workspaces/open/:slug0/resources/:slug1',
-                ['Claroline\CoreBundle\Entity\Resource\ResourceNode'],
-            ],
-            //open can be uuid or id (resource type then id)
-            '\/resource\/open\/([^\/]+)\/('.$endOfUrl.'*)' => [
-                '#/desktop/workspaces/open/:slug0/resources/:slug1',
-                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
-            ],
-            //show is type then id or uuid
-            '\/resources\/show\/(^\/^"^#^&^<^>]+)' => [
-                '#/desktop/workspaces/open/:slug0/resources/:slug1',
-                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
-            ],
-            //show is type then id or uuid
-            '\/resources\/show\/([^\/]*)\/('.$endOfUrl.'*)' => [
-                '#/desktop/workspaces/open/:slug0/resources/:slug1',
-                ['Claroline\CoreBundle\Entity\Workspace\Workspace', 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
-            ],
-        ];
-
-        foreach ($parsableEntities as $class => $properties) {
-            $this->log('Replacing old urls for '.$class.'...');
-            foreach ($properties as $property) {
-                $this->log('Looking for property '.$property.'...');
-                /** @var EntityManager $em */
-                $em = $this->getContainer()->get('doctrine.orm.entity_manager');
-                $metadata = $em->getClassMetadata($class);
-
-                $tableName = $metadata->getTableName();
-                $columnName = $metadata->getColumnName($property);
-
-                foreach ($regexes as $regex => $replacement) {
-                    $this->log('Matching regex '.$regex.'...');
-
-                    $rsm = new ResultSetMappingBuilder($em);
-                    $rsm->addRootEntityFromClassMetadata($class, '');
-                    $query = $em->createNativeQuery("SELECT * FROM $tableName WHERE $columnName RLIKE '$regex'", $rsm);
-                    $data = $query->getResult();
-                    $this->log(count($data).' results...');
-                    $i = 0;
-
-                    foreach ($data as $entity) {
-                        $this->log('Updating '.$i.'/'.count($data));
-                        $func = 'get'.ucfirst($property);
-                        $text = $entity->$func();
-                        $text = $this->replace($regex, $replacement, $text, $prefix, $input->getOption('show-text'));
-                        $func = 'set'.ucfirst($property);
-
-                        if ($input->getOption('force')) {
-                            $entity->$func($text);
-                            $em->persist($entity);
+                                $this->update($em->getConnection(), $class, $property, ['id' => $result['id'], 'content' => $text]);
+                            }
                         }
-
-                        ++$i;
-                    }
-
-                    if ($input->getOption('force')) {
-                        $this->log('Flushing...');
-                        $em->flush();
                     }
                 }
             }
         }
     }
 
-    public function replace($regex, $replacement, $text, $prefix = '', $show = false)
+    private function getPathsToReplace()
+    {
+        $uuid = '[0-9A-Za-z_\-\.]';
+
+        return [
+            // home tabs
+            '\/workspaces\/(?<ws>[0-9]+)\/open\/tool\/home#\/tab\/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/home/:obj',
+                ['ws' => null, 'obj' => 'Claroline\CoreBundle\Entity\Tab\HomeTab'],
+            ],
+            // ws resource manager
+            '\/workspaces/(?<ws>[0-9]+)/open/tool/resource_manager#resources/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/resources/:obj',
+                ['ws' => 'Claroline\CoreBundle\Entity\Workspace\Workspace', 'obj' => 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            '\/workspaces/(?<ws>[0-9]+)/open/tool/resource_manager#/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/resources/:obj',
+                ['ws' => 'Claroline\CoreBundle\Entity\Workspace\Workspace', 'obj' => 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //open can be id
+            '\/workspaces\/(?<ws>[0-9]+)\/open\/tool\/(?<obj>'.$uuid.'*)' => [
+                '#/desktop/workspaces/open/:ws/:obj',
+                ['ws' => 'Claroline\CoreBundle\Entity\Workspace\Workspace'],
+            ],
+            //open can be id
+            '\/workspaces\/(?<ws>[0-9]+)\/open' => [
+                '#/desktop/workspaces/open/:ws',
+                ['ws' => 'Claroline\CoreBundle\Entity\Workspace\Workspace'],
+            ],
+            //open can be uuid or id (resource type then id)
+            '\/resource\/open\/([A-Za-z_\-]+)\/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/resources/:obj',
+                ['ws' => null, 'obj' => 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //open can be uuid or id
+            '\/resource\/open\/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/resources/:obj',
+                ['ws' => null, 'obj' => 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //show is type then id or uuid
+            '\/resources\/show\/([A-Za-z_\-]+)\/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/resources/:obj',
+                ['ws' => null, 'obj' => 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+            //show is type then id or uuid
+            '\/resources\/show\/(?<obj>'.$uuid.'+)' => [
+                '#/desktop/workspaces/open/:ws/resources/:obj',
+                ['ws' => null, 'obj' => 'Claroline\CoreBundle\Entity\Resource\ResourceNode'],
+            ],
+        ];
+    }
+
+    private function replace($regex, $replacement, $text, $prefix = '', $show = false)
     {
         /** @var ObjectManager $om */
         $om = $this->getContainer()->get('Claroline\AppBundle\Persistence\ObjectManager');
@@ -151,24 +145,39 @@ class Update1205Command extends ContainerAwareCommand
 
         $newText = $text;
         if (!empty($matches)) {
+            $this->log('FOUND : '.count($matches[0]));
             foreach ($matches[0] as $pathIndex => $fullPath) {
                 $this->log('Found path : '.$fullPath);
 
-                $newPath = $replacement[0];
-                foreach ($replacement[1] as $pos => $class) {
-                    $id = trim($matches[$pos + 1][$pathIndex]);
+                $toReplace = [];
+                foreach ($replacement[1] as $name => $class) {
+                    if ($class && !empty($matches[$name])) {
+                        $id = trim($matches[$name][$pathIndex]);
 
-                    $this->log('Finding resource of class '.$class.' with identifier '.$id);
-                    $object = $om->find($class, $id);
-                    if ($object) {
-                        $newPath = str_replace(':slug'.$pos, $object->getSlug(), $newPath);
-                    } else {
-                        $this->error('Could not find object... skipping');
-                        break 2; // go to next path, don't try any other replacement
+                        $this->log('Finding resource of class '.$class.' with identifier '.$id);
+                        $object = $om->find($class, $id);
+                        if ($object) {
+                            $toReplace[$name] = $object;
+
+                            if (method_exists($object, 'getWorkspace') && !empty($object->getWorkspace())) {
+                                $toReplace['ws'] = $object->getWorkspace();
+                            }
+                        }
                     }
                 }
 
-                $newText = str_replace($fullPath, $newPath, $newText);
+                if (count($toReplace) === count($replacement[1])) {
+                    $newPath = $replacement[0];
+                    foreach ($toReplace as $name => $replace) {
+                        $newPath = str_replace(':'.$name, $replace->getSlug(), $newPath);
+                    }
+
+                    $newText = str_replace($fullPath, $newPath, $newText);
+                } else {
+                    $this->error('Could not find some route objects... skipping');
+
+                    return null;
+                }
             }
         }
 
@@ -178,6 +187,81 @@ class Update1205Command extends ContainerAwareCommand
         }
 
         return $newText;
+    }
+
+    private function fix(string $dbSource, string $prefix = '', bool $showText = false, bool $force = false)
+    {
+        /** @var EntityManager $em */
+        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
+
+        // create a connection to a database which has not already processed the converter
+        $conn = DriverManager::getConnection([
+            'dbname' => $dbSource,
+            'user' => $this->getContainer()->getParameter('database_user'),
+            'password' => $this->getContainer()->getParameter('database_password'),
+            'host' => $this->getContainer()->getParameter('database_host'),
+            'driver' => $this->getContainer()->getParameter('database_driver'),
+        ]);
+
+        foreach (static::ENTITIES as $class => $properties) {
+            foreach ($properties as $property) {
+                foreach ($this->getPathsToReplace() as $regex => $replacement) {
+                    // we search in the backup DB, because current DB has already been processed
+                    $data = $this->search($conn, $class, $property, $regex);
+                    foreach ($data as $i => $result) {
+                        $matches = [];
+                        preg_match_all('!'.$prefix.$regex.'!', $result['content'], $matches);
+                        if (!empty($matches) && 1 < count($matches[0])) {
+                            $text = $this->replace($regex, $replacement, $result['content'], $prefix, $showText);
+
+                            if ($text && $force) {
+                                $this->log('Updating '.$i.'/'.count($data));
+
+                                // do the update in the current data base to correct converted routes
+                                $this->update($em->getConnection(), $class, $property, ['id' => $result['id'], 'content' => $result['content']]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private function search(Connection $connection, string $class, string $property, string $regex)
+    {
+        $this->log(sprintf('Searching for route %s in prop "%s" of class "%s"', $regex, $property, $class));
+
+        /** @var EntityManager $em */
+        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
+        $metadata = $em->getClassMetadata($class);
+
+        $tableName = $metadata->getTableName();
+        $columnName = $metadata->getColumnName($property);
+
+        $sqlRegex = addslashes($regex);
+        $results = $connection
+            ->query("SELECT id, $columnName as content FROM $tableName WHERE $columnName RLIKE '$sqlRegex'")
+            ->fetchAll();
+
+        $this->log(sprintf('Found %d results.', count($results)));
+
+        return $results;
+    }
+
+    private function update(Connection $connection, string $class, string $property, array $data)
+    {
+        /** @var EntityManager $em */
+        $em = $this->getContainer()->get('doctrine.orm.entity_manager');
+        $metadata = $em->getClassMetadata($class);
+
+        $tableName = $metadata->getTableName();
+        $columnName = $metadata->getColumnName($property);
+
+        $id = $data['id'];
+        $newContent = addslashes($data['content']);
+        $connection->exec("
+            UPDATE $tableName SET $columnName = '$newContent' WHERE id = $id
+        ");
     }
 
     private function setLogger($logger)
