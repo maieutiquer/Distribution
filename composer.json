@@ -32,8 +32,8 @@
         "hwi/oauth-bundle": "^1.1",
         "icap/html-diff": "1.1.0",
         "jdorn/sql-formatter": "1.2.17",
-        "lightsaml/sp-bundle": "1.2.1",
-        "lightsaml/lightsaml-logout": "1.0.0",
+        // "lightsaml/sp-bundle": "1.2.1",
+        // "lightsaml/lightsaml-logout": "1.0.0",
         "meyfa/php-svg": "0.8.0",
         "postal/postal": "1.0",
         "psr/log": "1.0.2",
@@ -185,7 +185,7 @@
             "Claroline\\SlideshowBundle\\ClarolineSlideshowBundle",
             "Claroline\\OpenBadgeBundle\\ClarolineOpenBadgeBundle",
             "Claroline\\AudioPlayerBundle\\ClarolineAudioPlayerBundle",
-            "Claroline\\SamlBundle\\ClarolineSamlBundle",
+            // "Claroline\\SamlBundle\\ClarolineSamlBundle",
             "Claroline\\CursusBundle\\ClarolineCursusBundle",
             "Claroline\\BigBlueButtonBundle\\ClarolineBigBlueButtonBundle"
         ]
